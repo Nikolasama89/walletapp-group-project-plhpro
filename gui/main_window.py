@@ -18,3 +18,6 @@ class MainWindow:
 
         self.notebook.add(self.transactions_tab, text="Συναλλαγές")
         self.notebook.add(self.categories_tab, text="Κατηγορίες")
+        from gui.reports_tab import ReportsTab
+        self.reports_tab = ReportsTab(self.notebook)
+        self.notebook.add(self.reports_tab, text="Αναφορές")
