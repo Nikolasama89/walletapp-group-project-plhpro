@@ -81,7 +81,7 @@ class TransactionsTab(ttk.Frame):
             return
 
         # Call service
-        service_add_transaction(amount, transaction_type, category, date, description)
+        #service_add_transaction(amount, transaction_type, category, date, description)
 
         # Clear fields
         self.amount_entry.delete(0, "end")
