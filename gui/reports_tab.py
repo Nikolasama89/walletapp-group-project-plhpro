@@ -76,3 +76,19 @@ class ReportsTab(ttk.Frame):
         self.canvas = FigureCanvasTkAgg(fig, master=self)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(pady=10)
+
+        #Το reports_tab.py ειναι η καρτελα που εμφανιζει γραφηματα και στατιστικα.
+        #Περιεχει κουμπι για pie chart, κουμπι για bar chart,χωρο που εμφανιζει το γραφημα.
+
+        #Οταν ο χρηστης πατησει ενα κουμπι : 
+        # 1. καλειται μεθοδο show_pie_chart or show_bar_chart.
+        # 2. παιρνει δεδομενα απο το service.
+        # 3. creates figure
+        # 4. σχεδιαζεται το γραφημα.
+        # 5. ενσωματώνεται στο Tkinter μεσω FigureCanvasTkAgg.
+
+
+        #Η καρτέλα αναφορών είναι υπεύθυνη για την οπτικοποίηση δεδομένων μέσω της βιβλιοθήκης matplotlib. 
+        # Περιλαμβάνει ένα pie chart για κατανομή εξόδων ανά κατηγορία
+        #  και ένα bar chart για σύγκριση εσόδων και εξόδων.
+    

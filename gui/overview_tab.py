@@ -99,3 +99,8 @@ class OverviewTab(ttk.Frame):
             total += row[3]
 
         self.total_label.config(text="Συνολικό ποσό: {:.2f} €".format(total))
+
+
+        #Το overview_tab.py λειτουργεί ως κεντρική σελίδα φιλτραρίσματος και επισκόπησης, 
+        # όπου ο χρήστης μπορεί να επιλέγει φίλτρα 
+        # και να βλέπει συγκεντρωτικά αποτελέσματα σε πίνακα και summary labels.

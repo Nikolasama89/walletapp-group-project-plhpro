@@ -24,3 +24,7 @@ class MainWindow:
         self.notebook.add(self.categories_tab, text="Κατηγορίες")
         self.notebook.add(self.reports_tab, text="Αναφορές")
         self.notebook.add(self.overview_tab, text="Επισκόπηση")
+
+        #Το main_window.py οργανώνει το βασικό παράθυρο της εφαρμογής
+        #  και χωρίζει τη διεπαφή σε ξεχωριστές καρτέλες μέσω του ttk.Notebook.
+        #  Έτσι κάθε βασική λειτουργία υλοποιείται σε δικό της tab.
