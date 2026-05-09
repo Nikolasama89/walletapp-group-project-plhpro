@@ -15,5 +15,8 @@ from backend.repositories import (
 from backend.services import (
     CategoryService,
     TransactionService,
-    TaskService
+    TaskService,
+    StatsService,
+    BudgetService,
+    NotificationService
 )
