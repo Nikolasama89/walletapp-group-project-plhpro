@@ -12,3 +12,11 @@ from backend.repositories import (
     TransactionRepository,
     TaskRepository,
 )
+from backend.services import (
+    CategoryService,
+    TransactionService,
+    TaskService,
+    StatsService,
+    BudgetService,
+    NotificationService
+)
