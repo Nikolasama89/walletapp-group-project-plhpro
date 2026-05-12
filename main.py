@@ -1,81 +1,93 @@
-"""Δοκιμή των repositories."""
+from datetime import date, timedelta
+
 from backend import (
     Database,
-    Category, Transaction, Task,
-    CategoryRepository, TransactionRepository, TaskRepository,
+    CategoryService, TransactionService, TaskService,
+    StatsService, BudgetService, NotificationService,
 )
 
 
 def main():
     db = Database()
+    category_service = CategoryService(db)
+    transaction_service = TransactionService(db)
+    task_service = TaskService(db)
+    stats_service = StatsService(db)
+    budget_service = BudgetService(db)
+    notification_service = NotificationService(db)
 
-    cat_repo = CategoryRepository(db)
-    txn_repo = TransactionRepository(db)
-    task_repo = TaskRepository(db)
+    today = date.today()
+    today_iso = today.strftime("%Y-%m-%d")
 
-    # Δοκιμή με Λίστα από κατηγορίες
-    print(" Κατηγορίες εσόδων ")
-    for cat in cat_repo.get_all(type_filter="income"):
-        print(" ", cat)
+    # Δοκιμή για κατηγορίες
+    print(" Κατηγορίες ")
+    for cat in category_service.get_all_categories():
+        print("  -", cat.name, "(" + cat.type + ")")
 
-    print("\n Κατηγορίες εξόδων ")
-    for cat in cat_repo.get_all(type_filter="expense"):
-        print(" ", cat)
+    # Δοκιμή για τις συναλλαγές
+    print("\n Προσθήκη συναλλαγών ")
+    salary = [c for c in category_service.get_all_categories(type_filter="income")
+              if c.name == "Μισθός"][0]
+    food = [c for c in category_service.get_all_categories(type_filter="expense")
+            if c.name == "Τρόφιμα"][0]
+    rent = [c for c in category_service.get_all_categories(type_filter="expense")
+            if c.name == "Ενοίκιο"][0]
 
-    # Δοκιμή για νέα κατηγορία
-    print("\n Δημιουργία νέας κατηγορίας ")
-    new_cat = Category(name="Γυμναστήριο", type="expense", monthly_budget=50.0)
-    new_id = cat_repo.create(new_cat)
-    print(" Created with id:", new_id)
-    print(" ", cat_repo.get_by_id(new_id))
+    transaction_service.add_income(amount=1500, category_id=salary.id, txn_date=today_iso,
+                       note="Μισθός")
+    transaction_service.add_expense(amount=450, category_id=rent.id, txn_date=today_iso,
+                        note="Ενοίκιο")
+    transaction_service.add_expense(amount=120, category_id=food.id, txn_date=today_iso)
+    transaction_service.add_expense(amount=85, category_id=food.id, txn_date=today_iso)
 
-    # Δοκιμή για νέα συναλλαγή
-    print("\nΔημιουργία συναλλαγής ")
-    # Βρες id της κατηγορίας "Τρόφιμα"
-    food_cat = cat_repo.get_by_name("Τρόφιμα")
-    txn = Transaction(
-        txn_type="expense",
-        amount=35.50,
-        txn_date="2026-04-25",
-        category_id=food_cat.id,
-        note="Σούπερ μάρκετ",
-    )
-    txn_id = txn_repo.create(txn)
-    print("Created with id: ", txn_id)
-    print(" ", txn_repo.get_by_id(txn_id))
+    print("  Προστέθηκαν 4 συναλλαγές")
 
-    # Δημιουργία νέου task
-    print("\nΔημιουργία task")
-    rent_cat = cat_repo.get_by_name("Ενοίκιο")
-    task = Task(
-        task_type="obligation",
-        title="Πληρωμή ενοίκιο Μαΐου",
-        amount=400.0,
-        category_id=rent_cat.id if rent_cat else None,
-        due_date="2026-05-05",
+    # Δοκιμή για tasks
+    print("\n Προσθήκη tasks ")
+    task_service.create_task(
+        task_type="obligation", title="Πληρωμή ΔΕΗ",
+        amount=85, due_date=(today + timedelta(days=2)).strftime("%Y-%m-%d"),
         priority=1,
     )
-    task_id = task_repo.create(task)
-    print(" Created with id:", task_id)
-    print(" ", task_repo.get_by_id(task_id))
+    task_service.create_task(
+        task_type="obligation", title="Ληγμένη υποχρέωση",
+        due_date=(today - timedelta(days=3)).strftime("%Y-%m-%d"),
+    )
+    task_service.create_task(
+        task_type="wish", title="Αγορά laptop", amount=1200,
+    )
+    print("  Προστέθηκαν 3 tasks")
 
-    # Aggregates
-    print("\nΣύνολα Απριλίου 2026")
-    total_income = txn_repo.sum_by_type("income", year=2026, month=4)
-    total_expense = txn_repo.sum_by_type("expense", year=2026, month=4)
-    print("  Έσοδα:", total_income)
-    print("  Έξοδα:", total_expense)
-    print("  Υπόλοιπο:", total_income - total_expense)
+    # Δοκιμή για τα stats
+    print("\n Ισοζύγιο τρέχοντος μήνα ")
+    balance = stats_service.get_balance(year=today.year, month=today.month)
+    print("  Έσοδα:   ", balance["income"], "€")
+    print("  Έξοδα:   ", balance["expense"], "€")
+    print("  Υπόλοιπο:", balance["balance"], "€")
 
-    # Κατανομή εξόδων
-    print("\nΈξοδα ανά κατηγορία (Απρίλιος) ")
-    for row in txn_repo.sum_by_category("expense", year=2026, month=4):
-        print("  {}: {:.2f}€".format(row["category_name"], row["total"]))
+    print("\n Κατανομή εξόδων ανά κατηγορία ")
+    for row in stats_service.get_category_distribution(
+            "expense", year=today.year, month=today.month):
+        print("  -", row["category_name"], ":", row["total"], "€",
+              "(" + str(row["percentage"]) + "%)")
 
-    # Lista tasks
-    print("\nΑνοιχτά tasks ταξινομημένα ανά due_date ")
-    for t in task_repo.list_tasks(status="open"):
-        print(" ", t)
+    # Δοκιμή για το budget
+    print("\n Budget warnings ")
+    category_service.set_budget(food.id, 150)  # έχει 205 → exceeded
+    warnings = budget_service.get_warnings(year=today.year, month=today.month)
+    for w in warnings:
+        print("  -", w["category_name"], "(" + w["status"] + "):",
+              w["spent"], "/", w["budget"], "€")
+
+    # Δοκιμή για notifications
+    print("\n Ειδοποιήσεις ")
+    notifications = notification_service.get_all_notifications()
+    print("  Επερχόμενα:", len(notifications["upcoming"]))
+    for n in notifications["upcoming"]:
+        print("    -", n["task"].title, "(σε", n["days_remaining"], "μέρες)")
+    print("  Ληγμένα:", len(notifications["overdue"]))
+    for n in notifications["overdue"]:
+        print("    -", n["task"].title, "(πριν", n["days_overdue"], "μέρες)")
 
 
 if __name__ == "__main__":
