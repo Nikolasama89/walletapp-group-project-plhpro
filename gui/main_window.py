@@ -2,7 +2,6 @@ from tkinter import ttk
 
 from gui.transactions_tab import TransactionsTab
 from gui.categories_tab import CategoriesTab
-from gui.reports_tab import ReportsTab
 from gui.overview_tab import OverviewTab
 
 
@@ -17,12 +16,10 @@ class MainWindow:
 
         self.transactions_tab = TransactionsTab(self.notebook)
         self.categories_tab = CategoriesTab(self.notebook)
-        self.reports_tab = ReportsTab(self.notebook)
         self.overview_tab = OverviewTab(self.notebook)
 
         self.notebook.add(self.transactions_tab, text="Συναλλαγές")
         self.notebook.add(self.categories_tab, text="Κατηγορίες")
-        self.notebook.add(self.reports_tab, text="Αναφορές")
         self.notebook.add(self.overview_tab, text="Επισκόπηση")
 
         #Το main_window.py οργανώνει το βασικό παράθυρο της εφαρμογής
