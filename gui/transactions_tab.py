@@ -198,4 +198,3 @@ class TransactionsTab(ttk.Frame):
         self.load_categories()
         self.date_entry.delete(0, "end")
         self.note_entry.delete(0, "end")
-``
