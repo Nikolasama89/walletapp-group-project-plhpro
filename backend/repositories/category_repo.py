@@ -90,7 +90,7 @@ class CategoryRepository:
                 query += " AND type = ?"
                 params.append(type_filter)
 
-        query += " ORDER BY name"
+        query += " ORDER BY id"
 
         conn = self.db.get_connection()
         try:
