@@ -5,6 +5,7 @@ from gui.budget_tab import BudgetTab
 from gui.stats_tab import StatsTab
 from gui.notifications_tab import NotificationsTab
 from gui.overview_tab import OverviewTab
+from gui.transactions_tab import TransactionsTab
 
 
 class MainWindow:
