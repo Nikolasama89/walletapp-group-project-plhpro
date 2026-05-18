@@ -1,49 +1,68 @@
 from tkinter import ttk, messagebox
-from services.transaction_service import add_transaction as service_add_transaction
+
+from backend.exceptions import ValidationError, NotFoundError
 
 
 class TransactionsTab(ttk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, transaction_service, category_service):
         super().__init__(parent)
 
-        # Title
+        self.transaction_service = transaction_service
+        self.category_service = category_service
+
+        self.category_map = {}
+
         ttk.Label(
             self,
             text="Καταχώρηση Συναλλαγής",
-            font=("Arial", 12)
+            font=("Arial", 12, "bold")
         ).grid(row=0, column=0, columnspan=2, pady=10)
 
-        # Amount
-        ttk.Label(self, text="Ποσό (€):").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        # Ποσό
+        ttk.Label(self, text="Ποσό (€):").grid(
+            row=1, column=0, padx=10, pady=5, sticky="w"
+        )
         self.amount_entry = ttk.Entry(self)
         self.amount_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
 
-        # Type
-        ttk.Label(self, text="Τύπος:").grid(row=2, column=0, padx=10, pady=5, sticky="w")
+        # Τύπος συναλλαγής
+        ttk.Label(self, text="Τύπος:").grid(
+            row=2, column=0, padx=10, pady=5, sticky="w"
+        )
         self.type_combo = ttk.Combobox(
             self,
             values=["income", "expense"],
             state="readonly"
         )
         self.type_combo.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
-        self.type_combo.current(0)
+        self.type_combo.current(1)
+        self.type_combo.bind("<<ComboboxSelected>>", self.load_categories)
 
-        # Category
-        ttk.Label(self, text="Κατηγορία:").grid(row=3, column=0, padx=10, pady=5, sticky="w")
-        self.category_entry = ttk.Entry(self)
-        self.category_entry.grid(row=3, column=1, padx=10, pady=5, sticky="ew")
+        # Κατηγορία
+        ttk.Label(self, text="Κατηγορία:").grid(
+            row=3, column=0, padx=10, pady=5, sticky="w"
+        )
+        self.category_combo = ttk.Combobox(
+            self,
+            state="readonly"
+        )
+        self.category_combo.grid(row=3, column=1, padx=10, pady=5, sticky="ew")
 
-        # Date
-        ttk.Label(self, text="Ημερομηνία:").grid(row=4, column=0, padx=10, pady=5, sticky="w")
+        # Ημερομηνία
+        ttk.Label(self, text="Ημερομηνία (YYYY-MM-DD):").grid(
+            row=4, column=0, padx=10, pady=5, sticky="w"
+        )
         self.date_entry = ttk.Entry(self)
         self.date_entry.grid(row=4, column=1, padx=10, pady=5, sticky="ew")
 
-        # Description
-        ttk.Label(self, text="Περιγραφή:").grid(row=5, column=0, padx=10, pady=5, sticky="w")
-        self.description_entry = ttk.Entry(self)
-        self.description_entry.grid(row=5, column=1, padx=10, pady=5, sticky="ew")
+        # Σημείωση
+        ttk.Label(self, text="Σημείωση:").grid(
+            row=5, column=0, padx=10, pady=5, sticky="w"
+        )
+        self.note_entry = ttk.Entry(self)
+        self.note_entry.grid(row=5, column=1, padx=10, pady=5, sticky="ew")
 
-        # Save button
+        # Κουμπί αποθήκευσης
         self.save_button = ttk.Button(
             self,
             text="Αποθήκευση",
@@ -51,63 +70,132 @@ class TransactionsTab(ttk.Frame):
         )
         self.save_button.grid(row=6, column=1, pady=15, sticky="e")
 
-        # Make second column stretch
+        # Πίνακας συναλλαγών
+        self.transactions_table = ttk.Treeview(
+            self,
+            columns=("id", "date", "type", "category", "amount", "note"),
+            show="headings",
+            height=10
+        )
+
+        self.transactions_table.heading("id", text="ID")
+        self.transactions_table.heading("date", text="Ημερομηνία")
+        self.transactions_table.heading("type", text="Τύπος")
+        self.transactions_table.heading("category", text="Κατηγορία")
+        self.transactions_table.heading("amount", text="Ποσό (€)")
+        self.transactions_table.heading("note", text="Σημείωση")
+
+        self.transactions_table.column("id", width=50, anchor="center")
+        self.transactions_table.column("date", width=110, anchor="center")
+        self.transactions_table.column("type", width=90, anchor="center")
+        self.transactions_table.column("category", width=140)
+        self.transactions_table.column("amount", width=100, anchor="center")
+        self.transactions_table.column("note", width=180)
+
+        self.transactions_table.grid(
+            row=7,
+            column=0,
+            columnspan=2,
+            padx=10,
+            pady=10,
+            sticky="nsew"
+        )
+
         self.columnconfigure(1, weight=1)
+        self.rowconfigure(7, weight=1)
 
-    def save_transaction(self):
-        amount_text = self.amount_entry.get().strip()
-        transaction_type = self.type_combo.get().strip()
-        category = self.category_entry.get().strip()
-        date = self.date_entry.get().strip()
-        description = self.description_entry.get().strip()
+        self.load_categories()
+        self.load_transactions()
 
-        # Validation for amount
-        if not amount_text:
-            messagebox.showerror("Σφάλμα", "Το ποσό είναι υποχρεωτικό")
-            return
+    def load_categories(self, event=None):
+        txn_type = self.type_combo.get()
 
         try:
-            amount = float(amount_text)
-            if amount <= 0:
-                messagebox.showerror("Σφάλμα", "Το ποσό πρέπει να είναι θετικός αριθμός")
-                return
-        except ValueError:
-            messagebox.showerror("Σφάλμα", "Το ποσό πρέπει να είναι αριθμός")
-            return
+            categories = self.category_service.get_all_categories(
+                active_only=True,
+                type_filter=txn_type
+            )
 
-        # Basic validation for date
-        if not date:
-            messagebox.showerror("Σφάλμα", "Η ημερομηνία είναι υποχρεωτική")
-            return
+            self.category_map = {"Χωρίς κατηγορία": None}
 
-        # Call service
-        #service_add_transaction(amount, transaction_type, category, date, description)
+            for category in categories:
+                self.category_map[category.name] = category.id
 
-        # Clear fields
+            self.category_combo["values"] = list(self.category_map.keys())
+            self.category_combo.current(0)
+
+        except Exception as e:
+            messagebox.showerror("Σφάλμα", str(e))
+
+    def save_transaction(self):
+        amount = self.amount_entry.get().strip()
+        txn_type = self.type_combo.get().strip()
+        category_name = self.category_combo.get().strip()
+        txn_date = self.date_entry.get().strip()
+        note = self.note_entry.get().strip()
+
+        category_id = self.category_map.get(category_name)
+
+        if txn_date == "":
+            txn_date = None
+
+        if note == "":
+            note = None
+
+        try:
+            self.transaction_service.create_transaction(
+                txn_type=txn_type,
+                amount=amount,
+                category_id=category_id,
+                txn_date=txn_date,
+                note=note
+            )
+
+            messagebox.showinfo("Επιτυχία", "Η συναλλαγή αποθηκεύτηκε.")
+
+            self.clear_form()
+            self.load_categories()
+            self.load_transactions()
+
+        except ValidationError as e:
+            messagebox.showerror("Σφάλμα εγκυρότητας", str(e))
+
+        except NotFoundError as e:
+            messagebox.showerror("Δεν βρέθηκε", str(e))
+
+        except Exception as e:
+            messagebox.showerror("Σφάλμα", str(e))
+
+    def load_transactions(self):
+        for item in self.transactions_table.get_children():
+            self.transactions_table.delete(item)
+
+        try:
+            transactions = self.transaction_service.list_transactions()
+
+            for txn in transactions:
+                amount = "{:.2f}".format(txn.amount)
+
+                self.transactions_table.insert(
+                    "",
+                    "end",
+                    values=(
+                        txn.id,
+                        txn.txn_date,
+                        txn.txn_type,
+                        txn.category_name if txn.category_name else "",
+                        amount,
+                        txn.note if txn.note else ""
+                    )
+                )
+
+        except Exception as e:
+            messagebox.showerror("Σφάλμα", str(e))
+
+    def clear_form(self):
         self.amount_entry.delete(0, "end")
-        self.type_combo.current(0)
-        self.category_entry.delete(0, "end")
+        self.type_combo.current(1)
+        self.load_categories()
         self.date_entry.delete(0, "end")
-        self.description_entry.delete(0, "end")
-
-        messagebox.showinfo("Επιτυχία", "Η συναλλαγή αποθηκεύτηκε")
-
-
-        #Η καρτέλα συναλλαγών είναι υπεύθυνη
-        #  για τη συλλογή στοιχείων μιας συναλλαγής από τον χρήστη.
-        #  Τα δεδομένα διαβάζονται από τα widgets εισαγωγής,
-        #  γίνεται βασικός έλεγχος εγκυρότητας,
-        #  και στη συνέχεια ενεργοποιείται η αντίστοιχη ενέργεια μέσω κουμπιού.
-"""  Όταν πατηθεί το κουμπί:
-
-διαβάζει τα δεδομένα από τα πεδία
-κάνει basic validation
-καλεί το service
-(προσωρινά) μπορεί να τα δείχνει και στο app/table ή να τα στέλνει σε placeholder service 
-
-         “validation checks” 
-          Παράδειγμα:
-             αν το ποσό είναι κενό → error
-             αν το ποσό δεν είναι αριθμός → error
-             αν λείπει ημερομηνία → error
- """
+        self.note_entry.delete(0, "end")
+``

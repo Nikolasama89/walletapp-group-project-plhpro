@@ -1,19 +1,32 @@
 import tkinter as tk
+
+from backend.database import Database
+from backend.services import CategoryService, TransactionService
+
 from gui.main_window import MainWindow
 
+
 def main():
+    # Δημιουργούμε/αρχικοποιούμε τη βάση δεδομένων
+    database = Database()
+
+    # Δημιουργούμε τα πραγματικά backend services
+    category_service = CategoryService(database)
+    transaction_service = TransactionService(database)
+
+    # Δημιουργούμε το βασικό Tkinter παράθυρο
     root = tk.Tk()
-    app = MainWindow(root)
+
+    # Περνάμε τα services στο MainWindow
+    app = MainWindow(
+        root,
+        category_service=category_service,
+        transaction_service=transaction_service
+    )
+
+    # Ξεκινάει το GUI event loop
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
-
-    #Το main.py είναι το σημείο εκκίνησης του GUI. 
-    # Δημιουργεί το κύριο παράθυρο της εφαρμογής και αρχικοποιεί την κλάση MainWindow,
-    #  η οποία χτίζει την υπόλοιπη διεπαφή.
-
-
-    #Το GUI υλοποιεί το presentation layer της εφαρμογής.
-    #  Είναι υπεύθυνο για την αλληλεπίδραση με τον χρήστη και την παρουσίαση δεδομένων, 
-    # ενώ η λογική και η αποθήκευση δεδομένων υλοποιούνται σε άλλο επίπεδο.
